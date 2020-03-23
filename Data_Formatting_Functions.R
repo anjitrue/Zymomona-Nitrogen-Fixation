@@ -47,6 +47,35 @@ subset_df$Majority.protein.IDs <- majorityProtein
 
 
 # remove protein groups that are missing over 50% of the data across samples
+
+# *** corrected function below
+# remove.features.50percentcuttoff <- function (x) {
+#   
+#   # Calculate how many missing values per feature
+#   features.missing = rowMeans(is.na(x)) 
+#   print(paste0("Number of protein groups that have over 50% missing measurements: ",sum(features.missing > 0.50))) 
+#   features.missing.50more = rownames(x)[features.missing > 0.50] 
+#   
+#   # create a vector of the features that meet criteria
+#   keep.features = which(features.missing <= 0.50) 
+#   print(paste0("Protein groups that pass the 50% filteration: ", length(keep.features)))
+#   names(keep.features) = keep.features 
+#   
+#   # create a vector of the features that will be removed from data.frame
+#   remove.features = which(features.missing > 0.50)
+#   print(paste0("Number of protein groups removed from dataset: ", length(remove.features)))
+#   names(remove.features) = remove.features
+#   
+#   # If there isn't any features to remove keep all features
+#   if(is.empty(remove.features) == TRUE ){
+#     filtered = x[which(rownames(x) %in% keep.features),]
+#     # otherwise filter out the features that contain over 50% of data missing
+#   } else{
+#     filtered = x[-which(rownames(x) %in% remove.features),]
+#   }
+#   return(filtered)
+# }
+
 remove.features.50percentcuttoff <- function (x) {
   
   # Calculate how many missing values per feature
@@ -55,17 +84,17 @@ remove.features.50percentcuttoff <- function (x) {
   features.missing.50more = rownames(x)[features.missing > 0.50] 
   
   # create a vector of the features that meet criteria
-  keep.features = which(features.missing <= 0.50) 
+  keep.features = rownames(x)[features.missing <= 0.50]
   print(paste0("Protein groups that pass the 50% filteration: ", length(keep.features)))
-  names(keep.features) = keep.features 
+  #names(keep.features) = keep.features 
   
   # create a vector of the features that will be removed from data.frame
-  remove.features = which(features.missing > 0.50)
+  remove.features = rownames(x)[features.missing > 0.50]
   print(paste0("Number of protein groups removed from dataset: ", length(remove.features)))
-  names(remove.features) = remove.features
+  #names(remove.features) = remove.features
   
   # If there isn't any features to remove keep all features
-  if(is.empty(remove.features) == TRUE ){
+  if(sum(features.missing) == 0 ){
     filtered = x[which(rownames(x) %in% keep.features),]
     # otherwise filter out the features that contain over 50% of data missing
   } else{
@@ -73,7 +102,6 @@ remove.features.50percentcuttoff <- function (x) {
   }
   return(filtered)
 }
-
 
 
 # Perform feature removal on only the LFQ data only
