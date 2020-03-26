@@ -137,10 +137,13 @@ pheatmap::pheatmap(NitrogenFixation_downshift_merged_log2_matrix,
 
 colnames(NitrogenFixation_upshift_merged_log2_matrix) <- meta_Zymo_NitrogenFixation$sample.name[1:23]
 colnames(NitrogenFixation_downshift_merged_log2_matrix) <- meta_Zymo_NitrogenFixation$sample.name[24:nrow(meta_Zymo_NitrogenFixation)]
-write.csv(NitrogenFixation_upshift_merged_log2_matrix,
-          "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Upshift_LFQ_20200326.csv")
-write.csv(NitrogenFixation_downshift_merged_log2_matrix,
-          "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Downshift_LFQ_20200326.csv")
+
+#LFQ sheets
+#write.csv(NitrogenFixation_upshift_merged_log2_matrix,
+#          "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Upshift_LFQ_20200326.csv")
+
+#write.csv(NitrogenFixation_downshift_merged_log2_matrix,
+#          "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Downshift_LFQ_20200326.csv")
 
 #### Statistics ####
 # transforms data frames such that samples are rows and features are columns
