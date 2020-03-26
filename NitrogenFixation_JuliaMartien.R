@@ -3,7 +3,8 @@ library(ggplot2)
 library(plotly)
 library(rapportools)
 library(pheatmap)
-library()
+library(RColorBrewer)
+
 
 #browseVignettes("pcaMethods")
 
@@ -134,41 +135,130 @@ pheatmap::pheatmap(NitrogenFixation_downshift_merged_log2_matrix,
                    scale = "row",
                    cluster_cols = FALSE)
 
+colnames(NitrogenFixation_upshift_merged_log2_matrix) <- meta_Zymo_NitrogenFixation$sample.name[1:23]
+colnames(NitrogenFixation_downshift_merged_log2_matrix) <- meta_Zymo_NitrogenFixation$sample.name[24:nrow(meta_Zymo_NitrogenFixation)]
+write.csv(NitrogenFixation_upshift_merged_log2_matrix,
+          "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Upshift_LFQ_20200326.csv")
+write.csv(NitrogenFixation_downshift_merged_log2_matrix,
+          "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Downshift_LFQ_20200326.csv")
 
 #### Statistics ####
 # transforms data frames such that samples are rows and features are columns
-t_NF_upshift_noMeta <- t(NitrogenFixation_upshift_merged[,-c(1:14)])
-rownames(t_NF_upshift_noMeta) <- meta_Zymo_NitrogenFixation$sample.name[1:23]
-
-# in order to aggregate by sample name, use numeric matrix as R object, by Sample Name from a different object
-# and the function of choice
-average_time.point_NF_upshift <- aggregate(t_NF_upshift_noMeta,
-                                              list(rownames(t_NF_upshift_noMeta)), mean)
-
-# rename the colnames and rown names for future re-ordering
-colnames(average_time.point_NF_upshift) <- c("Sample.Name", NitrogenFixation_upshift_merged$Majority.protein.IDs)
-rownames(average_time.point_NF_upshift) <- average_time.point_NF_upshift$Sample.Name
 
 # order samples by substring "time"
+
+#Need a for loop to decide between down and upshift data
 reorder_samples_time <- function(x){
-  m = x[,1] # Extract sample names
   
-  r= strsplit(m,"-") # Split the column names based on the -
+  t_NF_shift <- t(x[,-c(1:14)]) #Remove meta data
   
-  # Create a data.frame with four columns for each of the string split characters
-  # X1 = Upshift(U)/Downshift(D), X2 = N2/NH4 , X3 = Replicate (A,B,C), X4 = time (min) 
-  q = data.frame(matrix(unlist(r),nrow=length(m),byrow=T)) 
-  q$X4 <- as.numeric(as.character(q$X4))
+  m = vector() #Create vectors to append sample names
+  n = vector()
+  #For loop to decide if sample name is either from the Upshift or Downshift experiment
+  for (i in 1:length(meta_Zymo_NitrogenFixation$sample.name)) {
+    if(length(grep("U",meta_Zymo_NitrogenFixation$sample.name[i])) == 0){
+      n = append(n,meta_Zymo_NitrogenFixation$sample.name[i])
+    } else{
+      m = append(m,meta_Zymo_NitrogenFixation$sample.name[i]) 
+    } 
+  }
+   # String split based on -
+  if(nrow(t_NF_shift) == 23){
+    r = strsplit(m,"-") # Split the vector names based on the -
+    
+      # Create a data.frame with four columns for each of the string split characters
+      # X1 = Upshift(U)/Downshift(D), X2 = N2/NH4 , X3 = Replicate (A,B,C), X4 = time (min) 
+      q = data.frame(matrix(unlist(r),nrow=length(m),byrow=T))
+      q$X4 <- as.numeric(as.character(q$X4))
+      
+      #important if the samples are out of order
+      #q = q[order(q$X2,as.numeric(as.character(q$X4))),] # order by X2 and X4
+      
+      # Reformat names
+      m = paste0(q$X1,"-",q$X2,"-",q$X3, "-", q$X4)
+      o = paste0(q$X1, "-", q$X2, "-", q$X4)
+      
+  }else{
+    r = strsplit(n,"-") # Split vector on the -
+    # Create a data.frame with four columns for each of the string split characters
+    # X1 = Upshift(U)/Downshift(D), X2 = N2/NH4 , X3 = Replicate (A,B,C), X4 = time (min) 
+    q = data.frame(matrix(unlist(r),nrow=length(n),byrow=T))
+    q$X4 <- as.numeric(as.character(q$X4))
+    
+    #important if the samples are out of order
+    #q = q[order(q$X2,as.numeric(as.character(q$X4))),] # order by X2 and X4
+    
+    # Reformat names
+    n = paste0(q$X1,"-",q$X2,"-",q$X3, "-", q$X4)
+    o = paste0(q$X1, "-", q$X2, "-", q$X4)
+    
+    }
+ 
+  # Bind the ordered/re-formated names with dataframe 
+  t_NF_shift <- cbind.data.frame(o, t_NF_shift)
+  # rename the colnames for future re-ordering
+  colnames(t_NF_shift) <- c("Sample.Name", x$Majority.protein.IDs)
   
-  q = q[order(q$X2,as.numeric(as.character(q$X4))),] # order by X2 and X4
+  #Average aggregate
+  average_time.point_NF <- aggregate(t_NF_shift[,-1],
+                                             list(t_NF_shift$Sample.Name), mean)
+  rownames(average_time.point_NF) <- average_time.point_NF$Group.1
   
-  # Reformat names
-  m = paste0(q$X1,"-",q$X2,"-",q$X3, "-", q$X4)
   
-  # Rearrange columns
-  x = x[m,]
+  std_time.point_NF = aggregate(log2(t_NF_shift[,-1]),
+                                list(t_NF_shift$Sample.Name), sd)
+  rownames(std_time.point_NF) <- std_time.point_NF$Group.1
   
-  return(x)
+  unique_o = unique(o)
+  #Rearrange columns
+  average_time.point_NF = average_time.point_NF[unique_o,]
+  average_time.point_NF_matrix_Log2 = log2(average_time.point_NF[,-1])
+  rownames(average_time.point_NF_matrix_Log2) = average_time.point_NF[,1]
+  
+  std_time.point_NF = std_time.point_NF[unique_o,]
+  rownames(std_time.point_NF) = std_time.point_NF[,1]
+  
+  return(average_time.point_NF_matrix_Log2)
 }
 
 
+ordered_t_NF_upshift_average <- reorder_samples_time(NitrogenFixation_upshift_merged)
+ordered_t_NF_upshift_std <- reorder_samples_time(NitrogenFixation_upshift_merged)
+scaleRYG <- colorRampPalette(c("red","black","darkgreen"), space = "rgb")(31)
+pheatmap(t(ordered_t_NF_upshift_average),
+         color = scaleRYG,
+         cluster_cols = FALSE,
+         scale = "row")
+
+ordered_t_NF_downshift_average <- reorder_samples_time(NitrogenFixation_downshift_merged)
+ordered_t_NF_downshift_std <- reorder_samples_time(NitrogenFixation_downshift_merged)
+pheatmap(t(ordered_t_NF_downshift_average),
+         color = scaleRYG,
+         cluster_cols = FALSE,
+         scale = "row")
+
+t_NF_upshft_FC <- apply(t(ordered_t_NF_upshift_average), 2,
+                        function (x) x - x[,7])
+
+t_NF_upshft_FC <- ordered_t_NF_upshift_average
+for (i in 1:nrow(ordered_t_NF_upshift_average)) {
+    t_NF_upshft_FC[i,] <- ordered_t_NF_upshift_average[i,] - ordered_t_NF_upshift_average[7,]
+}
+NF_upshift_FC <- t(t_NF_upshft_FC)
+  
+
+t_NF_downshft_FC <- ordered_t_NF_downshift_average
+for (i in 1:nrow(ordered_t_NF_downshift_average)) {
+  t_NF_downshft_FC[i,] <- ordered_t_NF_downshift_average[i,] - ordered_t_NF_downshift_average[7,]
+}
+NF_downshift_FC <- t(t_NF_downshft_FC)
+
+
+# write.csv(ordered_t_NF_upshift_average, "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Upshift_Average_20200324.csv")
+# write.csv(ordered_t_NF_downshift_average, "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Downshift_Average_20200324.csv")
+# 
+# write.csv(ordered_t_NF_upshift_std, "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Upshift_std_20200324.csv")
+# write.csv(ordered_t_NF_downshift_std, "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Downshift_std_20200324.csv")
+
+#write.csv(NF_upshift_FC, "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Upshift_FC_20200324.csv")
+#write.csv(NF_downshift_FC, "H:/Projects/Proteomics/Zymomona/Martein,Julia_NitrogenFixation/R_outputs/NF_Downshift_FC_20200324.csv")
